@@ -1019,16 +1019,17 @@ class TaskService {
                     acc.existingFiles.add(file.md5);
                     acc.existingFileNames.add(file.name);
                     acc.existingFileList.push(file);
-                    if ((task.totalEpisodes == null || task.totalEpisodes <= 0) || this._checkFileSuffix(file, true, mediaSuffixs)) {
+                    // 始终过滤垃圾文件，只计算媒体文件和字幕文件
+                    if (this._checkFileSuffix(file, true, mediaSuffixs)) {
                         acc.existingMediaCount++;
                     }
                 }
                 return acc;
-            }, { 
-                existingFiles: new Set(), 
-                existingFileNames: new Set(), 
+            }, {
+                existingFiles: new Set(),
+                existingFileNames: new Set(),
                 existingFileList: [],
-                existingMediaCount: 0 
+                existingMediaCount: 0
             });
             let aiFiltered = false;
             if (AIService.isEnabled() && task.matchPattern && task.matchOperator && task.matchValue) {
