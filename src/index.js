@@ -700,8 +700,9 @@ AppDataSource.initialize().then(async () => {
                 const fiveMinutes = 5 * 60 * 1000;
                 // 使用 processingStartTime 进行超时检测（比 lastCheckTime 更准确）
                 // processingStartTime 在任务开始时就更新，lastCheckTime 只在正常完成后才更新
-                if (processingStartTime && (now.getTime() - processingStartTime.getTime() > fiveMinutes)) {
-                    logTaskEvent(`任务[${task.resourceName}] processing 状态超时(>5分钟)，自动恢复为 pending`);
+                // 如果 processingStartTime 为 NULL（旧数据或异常退出），强制恢复
+                if (!processingStartTime || (now.getTime() - processingStartTime.getTime() > fiveMinutes)) {
+                    logTaskEvent(`任务[${task.resourceName}] processing 状态超时或数据异常，自动恢复为 pending`);
                     task.status = 'pending';
                     task.processingStartTime = null;
                     await taskRepo.save(task);
