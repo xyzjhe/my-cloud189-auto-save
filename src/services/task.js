@@ -1096,6 +1096,14 @@ class TaskService {
                     const tmdbTitle = task.tmdbTitle || (this._extractCleanTitle ? this._extractCleanTitle(task.resourceName, false).name : task.resourceName) || task.resourceName;
                     const CasSmartDedupService = require('./CasSmartDedupService');
                     const smartDedup = new CasSmartDedupService(this);
+                    // 初始化家庭中转变量（与原有流程一致）
+                    let familyCloud189 = cloud189;
+                    if (enableCasFamilyTransfer && task.casFamilyAccountId && task.casFamilyAccountId !== task.accountId) {
+                        const familyAccount = await this.accountRepo.findOneBy({ id: task.casFamilyAccountId });
+                        if (familyAccount) {
+                            familyCloud189 = Cloud189Service.getInstance(familyAccount);
+                        }
+                    }
                     const dedupResult = await smartDedup.process(task, cloud189, uncachedCasFiles, tmdbTitle, {
                         enableCasFamilyTransfer, casFamilyFolderIdActual, familyCloud189, account, enableDeleteCasFile
                     });
