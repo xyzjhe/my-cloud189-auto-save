@@ -1083,6 +1083,7 @@ class TaskService {
             const failedShareFileIds = new Set();
             let successFiles = [];  // 成功的文件名（需在智能去重之前定义）
             let casSuccessCount = 0;  // CAS成功计数（需在智能去重之前定义）
+            let smartDedupExecuted = false;  // 智能去重执行标记（需在更外层定义）
             if (enableCasRapidUpload) {
                 // 从分享文件中筛选 .cas 文件
                 const allCasFiles = shareFiles.filter(f => !f.isFolder && CasUtils.isCasFile(f.name));
@@ -1091,7 +1092,6 @@ class TaskService {
 
                 // ====== 智能去重判断：初次执行/清缓存后 ======
                 const useSmartDedup = (uncachedCasFiles.length === allCasFiles.length && uncachedCasFiles.length > 10);
-                let smartDedupExecuted = false;
 
                 if (useSmartDedup) {
                     logTaskEvent(`[CAS] 使用智能去重v2模式（内存比对优先）`);
@@ -1112,8 +1112,7 @@ class TaskService {
                     for (const f of dedupResult.successFiles) successFiles.push(f);
                     for (const r of dedupResult.casResults) casResults.push(r);
                     for (const id of dedupResult.failedShareFileIds) failedShareFileIds.add(id);
-                    casSuccessCount += dedupResult.casSuccessCount;
-                    logTaskEvent(`[CAS智能去重v2] 完成，成功 ${dedupResult.casSuccessCount} 个`);
+                    casSuccessCount = dedupResult.casSuccessCount;
                     smartDedupExecuted = true;
                 }
 
@@ -1690,8 +1689,11 @@ class TaskService {
                 this._casFamilyRootFolderId = null;
             }
 
-            // casSuccessCount 已在外层定义，这里累加原有流程的成功数
-            casSuccessCount += casResults.filter(r => r.success).length;
+            // casSuccessCount 已在智能去重流程中正确计算（包含跳过+秒传）
+            // 这里只累加非智能去重流程的 casResults 成功数（避免重复计数）
+            if (!smartDedupExecuted) {
+                casSuccessCount += casResults.filter(r => r.success).length;
+            }
 
 
             // 处理新文件并保存到数据库和云盘
@@ -1699,19 +1701,34 @@ class TaskService {
                 const resourceName = task.resourceName;
                 const folderPath = task.realFolderName || task.realFolderId || '';
                 const totalEps = task.totalEpisodes > 0 ? task.totalEpisodes : '?';
-                const progressEps = existingMediaCount + fileCount + casSuccessCount;
+                
+                // 智能去重流程：progressEps = 已有视频数（刷新后）
+                // 常规流程：progressEps = 已有 + 新增
+                let progressEps;
+                if (smartDedupExecuted) {
+                    // 智能去重后刷新目标目录获取真实视频数
+                    try {
+                        const refreshedFiles = await this.getAllFolderFiles(cloud189, task);
+                        const refreshedVideoCount = refreshedFiles.filter(f => !f.isFolder && !CasUtils.isCasFile(f.name) && this._checkFileSuffix(f, mediaSuffixs, ConfigService.getConfigValue('task.enableOnlySaveMedia'))).length;
+                        progressEps = refreshedVideoCount;
+                    } catch (e) {
+                        progressEps = existingMediaCount + casSuccessCount;
+                    }
+                } else {
+                    progressEps = existingMediaCount + fileCount + casSuccessCount;
+                }
 
                 // 构建具有表头的结构化通知消息
                 const lines = [
                     `【天翼云转存】`,
-                    `✅《${resourceName}》新增 ${fileCount + casSuccessCount} 集`,
+                    `✅《${resourceName}》新增 ${smartDedupExecuted ? casResults.filter(r => r.success).length : (fileCount + casSuccessCount)} 集`,
                     `📁 ${folderPath}`,
                     ...fileNameList,
                 ];
                 // 添加 CAS 秒传结果到通知
                 if (casSuccessCount > 0) {
-                    lines.push(`⚡ CAS秒传成功 ${casSuccessCount} 个:`);
                     const successfulCas = casResults.filter(r => r.success);
+                    lines.push(`⚡ CAS秒传成功 ${successfulCas.length} 个:`);
                     // 当文件数量超过 6 个时，只显示前 3 个和后 3 个，中间省略
                     if (successfulCas.length > 6) {
                         const first3 = successfulCas.slice(0, 3);
