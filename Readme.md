@@ -6,7 +6,7 @@
         <img src="https://img.shields.io/badge/Docker-Images-blue?style=flat-square&logo=docker" alt="Docker">
     </a>
     <a href="https://github.com/ymting/my-cloud189-auto-save/releases">
-        <img src="https://img.shields.io/badge/Version-2.2.60-green?style=flat-square" alt="Version">
+        <img src="https://img.shields.io/badge/Version-2.2.63-green?style=flat-square" alt="Version">
     </a>
 </div>
 
@@ -231,6 +231,16 @@ docker run -d \
 ---
 
 ## 📋 版本更新日志
+
+### v2.2.63 (2026-05-08)
+
+- Webhook 支持 `{savePath}` 占位符：转存完成后可将保存路径传递给 SmartStrm 等外部服务
+- 所有 got 请求添加超时配置：防止未配置代理时请求挂起导致内存泄漏
+- 智能去重 v2 优化：移除 CAS 文件数量限制，支持少量文件的智能去重
+- 企业微信 TMDB 绑定修复：改用 `autoRename` 而非 `processAllTasks`，避免误删文件
+- TMDB 绑定后不清除缓存：防止触发完整任务流程导致文件被删除
+- TMDB 绑定后自动更新任务卡片信息
+- TMDBService 解构导入修复
 
 ### v2.2.60 (2026-04-27)
 
