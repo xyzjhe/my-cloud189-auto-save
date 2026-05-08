@@ -234,7 +234,7 @@ docker run -d \
 
 ### v2.2.63 (2026-05-08)
 
-- Webhook 支持 `{savePath}` 占位符：转存完成后可将保存路径传递给 SmartStrm 等外部服务
+- Webhook 支持 `{savePath}` 占位符：转存完成后可将保存路径传递给 SmartStrm 等外部服务（感谢 [@ThinkLogicLab](https://github.com/ThinkLogicLab) PR #15）
 - 所有 got 请求添加超时配置：防止未配置代理时请求挂起导致内存泄漏
 - 智能去重 v2 优化：移除 CAS 文件数量限制，支持少量文件的智能去重
 - 企业微信 TMDB 绑定修复：改用 `autoRename` 而非 `processAllTasks`，避免误删文件
