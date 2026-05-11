@@ -70,14 +70,6 @@ class CustomPushService extends MessageService {
         return newObj;
     }
 
-    // 自定义 webhook 主要用于联动下游自动化任务，只在重命名成功后触发，避免转存完成阶段提前执行。
-    _shouldTriggerWebhook(content) {
-        return typeof content === 'string'
-            && content.includes('重命名完成')
-            && !content.includes('无需重命名')
-            && !content.includes('重命名失败');
-    }
-
     async _sendSingleRequest(title, content, singlePushConfig) {
         if (!singlePushConfig || !singlePushConfig.enabled) {
             return false;
@@ -168,8 +160,13 @@ class CustomPushService extends MessageService {
         if (!this.enabled) {
             return;
         }
-        if (!this._shouldTriggerWebhook(message)) {
-            return true;
+        // 自定义 webhook 由任务事件显式触发，普通通知不直接触发，避免转存完成消息早于后处理阶段执行。
+        return true;
+    }
+
+    async sendWebhookMessage(message, title = '应用通知') {
+        if (!this.enabled) {
+            return false;
         }
         let allSuccess = true;
         for (const config of this.customPushConfigs) {
@@ -187,7 +184,7 @@ class CustomPushService extends MessageService {
         if (!this.enabled) {
             return;
         }
-        // 自定义 webhook 只用于重命名完成后的联动，刮削通知不触发外部 webhook。
+        // 自定义 webhook 只用于新增文件后处理阶段的联动，刮削通知不触发外部 webhook。
         return true;
     }
 
